@@ -1,0 +1,80 @@
+version: '3'
+
+services:
+  nominatim:
+    image: mediagis/nominatim:4.3
+    container_name: nominatim
+    ports:
+      - "8080:8080"
+    environment:
+      - PBF_PATH=/nominatim/philippines-latest.osm.pbf
+      - REPLICATION_URL=https://download.geofabrik.de/asia/philippines-updates/
+      - IMPORT_WIKIPEDIA=true
+      - IMPORT_US_POSTCODES=false
+      - IMPORT_GB_POSTCODES=false
+      - IMPORT_TIGER_ADDRESSES=false
+      - FLATNODE_FILE=/nominatim/flatnode.file
+      - THREADS=4
+    volumes:
+      - nominatim-data:/var/lib/postgresql/14/main
+      - nominatim-flatnode:/nominatim/flatnode.file
+      - ./data/philippines-latest.osm.pbf:/nominatim/philippines-latest.osm.pbf
+      - ./postgresql.custom.conf:/etc/postgresql/14/main/conf.d/postgresql.custom.conf
+      - ./custom-search.php:/nominatim/settings/custom-search.php
+    depends_on:
+      - redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+  redis:
+    image: redis:7-alpine
+    container_name: nominatim-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  update-service:
+    image: mediagis/nominatim:4.3
+    container_name: nominatim-updater
+    volumes:
+      - nominatim-data:/var/lib/postgresql/14/main
+      - nominatim-flatnode:/nominatim/flatnode.file
+      - ./data/philippines-latest.osm.pbf:/nominatim/philippines-latest.osm.pbf
+      - ./update-script.sh:/usr/local/bin/update-script.sh
+    command: >
+      sh -c "chmod +x /usr/local/bin/update-script.sh &&
+             while true; do
+               /usr/local/bin/update-script.sh;
+               sleep 86400;
+             done"
+    depends_on:
+      - nominatim
+    restart: always
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+
+volumes:
+  nominatim-data:
+  nominatim-flatnode:
+  redis-data: 
