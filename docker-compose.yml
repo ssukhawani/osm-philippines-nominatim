@@ -13,14 +13,20 @@ services:
       - IMPORT_US_POSTCODES=false
       - IMPORT_GB_POSTCODES=false
       - IMPORT_TIGER_ADDRESSES=false
+      - IMPORT_PH_POSTCODES=true
       - FLATNODE_FILE=/nominatim/flatnode.file
       - THREADS=4
+      - IMPORT_STYLE=full
+      - PGDATA=/var/lib/postgresql/14/main
     volumes:
       - nominatim-data:/var/lib/postgresql/14/main
       - nominatim-flatnode:/nominatim/flatnode.file
       - ./data/philippines-latest.osm.pbf:/nominatim/philippines-latest.osm.pbf
+      - ./data/philippines/admin-boundaries.geojson:/nominatim/data/admin-boundaries.geojson
+      - ./data/philippines/philippines-roads.geojson:/nominatim/data/philippines-roads.geojson
       - ./postgresql.custom.conf:/etc/postgresql/14/main/conf.d/postgresql.custom.conf
       - ./custom-search.php:/nominatim/settings/custom-search.php
+    entrypoint: /app/start.sh
     depends_on:
       - redis
     restart: always
