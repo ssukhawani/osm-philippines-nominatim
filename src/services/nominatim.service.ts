@@ -75,6 +75,7 @@ export class NominatimService {
                     'User-Agent': this.userAgent
                 }
             });
+            console.log('Response from Nominatim:', response.data);
 
             // Cache the results
             await this.setInCache(cacheKey, response.data);
